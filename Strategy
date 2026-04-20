@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Content Intelligence Suite</title>
+<style>
+  body { font-family: sans-serif; background: #06080A; color: #E2EAF0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; gap: 24px; }
+  h1 { color: #D4A843; margin-bottom: 8px; }
+  a { display: block; background: #111820; border: 1px solid #1C2530; border-radius: 8px; padding: 24px 40px; color: #E2EAF0; text-decoration: none; font-size: 18px; text-align: center; }
+  a:hover { border-color: #D4A843; }
+</style>
+</head>
+<body>
+  <h1>⬡ Content Intelligence Suite</h1>
+  <a href="01-strategy-analyser.html">📡 Strategy Analyser</a>
+  <a href="02-content-creator.html">◈ Content Creator</a>
+</body>
+</html>
