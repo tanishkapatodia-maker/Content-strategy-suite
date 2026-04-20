@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Strategy Analyser · Content Intelligence</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,500;1,400&display=swap');
+  :root {
+    --bg: #06080A; --surface: #0D1117; --card: #111820;
+    --border: #1C2530; --border2: #2A3A4A;
+    --gold: #D4A843; --gold-dim: #8A6A22; --gold-bg: #12100A;
+    --teal: #2DD4BF; --rose: #F87171; --purple: #A78BFA;
+    --text: #E2EAF0; --muted: #6B7F92; --dim: #3A4D5C;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Lora', serif; min-height: 100vh; }
+  ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: var(--bg); } ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .mono { font-family: 'DM Mono', monospace; }
+  .serif { font-family: 'DM Serif Display', serif; }
+
+  /* Layout */
+  #app { display: flex; flex-direction: column; min-height: 100vh; }
+  .topbar { background: var(--bg); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; align-items: center; gap: 6px; height: 52px; position: sticky; top: 0; z-index: 100; }
+  .topbar-title { font-family: 'DM Serif Display', serif; font-size: 16px; color: var(--text); margin-right: 24px; }
+  .topbar-logo { font-size: 18px; color: var(--gold); }
+  .nav-btn { background: none; border: none; border-bottom: 2px solid transparent; padding: 8px 14px; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); transition: all 0.15s; }
+  .nav-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+  .nav-btn:hover { color: var(--text); }
+  .badge { background: #2A1A00; border: 1px solid var(--gold-dim); color: var(--gold); border-radius: 20px; padding: 3px 10px; font-family: 'DM Mono', monospace; font-size: 10px; margin-left: auto; }
+  .content { flex: 1; overflow: auto; }
+  .container { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
+  .sm-container { max-width: 680px; margin: 0 auto; padding: 32px 24px; }
+
+  /* Cards */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; transition: border-color 0.15s; }
+  .card:hover { border-color: var(--border2); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+
+  /* Forms */
+  input, textarea, select {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+    color: var(--text); outline: none; font-family: 'Lora', serif; font-size: 13px;
+    padding: 10px 14px; width: 100%; transition: border-color 0.15s;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--gold-dim); }
+  textarea { resize: vertical; line-height: 1.6; }
+  .form-row { margin-bottom: 20px; }
+  .form-label { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--gold); letter-spacing: 0.14em; text-transform: uppercase; display: block; margin-bottom: 6px; }
+  .form-hint { font-size: 11px; color: var(--dim); margin-bottom: 8px; font-family: 'DM Mono', monospace; }
+
+  /* Buttons */
+  .btn { border: none; border-radius: 4px; cursor: pointer; font-family: 'DM Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; transition: all 0.15s; }
+  .btn-primary { background: var(--gold); color: #0A0800; padding: 14px 28px; font-size: 11px; font-weight: 700; }
+  .btn-primary:hover { filter: brightness(1.1); }
+  .btn-primary:disabled { background: var(--card); color: var(--muted); cursor: not-allowed; }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 8px 16px; font-size: 10px; }
+  .btn-ghost:hover { border-color: var(--border2); color: var(--text); }
+  .btn-sm { padding: 6px 12px; font-size: 10px; }
+
+  /* Pills */
+  .pill { border-radius: 20px; padding: 4px 12px; font-size: 10px; font-family: 'DM Mono', monospace; letter-spacing: 0.08em; cursor: pointer; transition: all 0.15s; border: 1px solid var(--border); background: transparent; color: var(--muted); display: inline-block; }
+  .pill.active { border-color: var(--teal); color: var(--teal); background: #001A18; }
+  .pill.active-gold { border-color: var(--gold-dim); color: var(--gold); background: var(--gold-bg); }
+  .pill-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  /* Section head */
+  .sh { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+  .sh-bar { width: 3px; border-radius: 2px; background: var(--gold); }
+  .sh-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .sh.lg .sh-label { font-size: 13px; text-transform: none; color: var(--text); font-weight: 500; letter-spacing: 0; }
+  .sh.lg .sh-bar { height: 22px; }
+
+  /* Stage pipeline */
+  .stage-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+  .stage-item { display: flex; gap: 14px; align-items: center; padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; transition: all 0.3s; }
+  .stage-item.active { background: #0D1A14; border-color: rgba(45,212,191,0.3); }
+  .stage-icon { font-size: 18px; }
+  .stage-name { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); flex: 1; }
+  .stage-item.active .stage-name { color: var(--teal); }
+  .stage-item.done .stage-name { color: var(--dim); }
+  .stage-status { font-family: 'DM Mono', monospace; font-size: 11px; }
+
+  /* Log */
+  .log { background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 14px 16px; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); line-height: 2; margin-bottom: 20px; max-height: 150px; overflow-y: auto; }
+
+  /* Report */
+  .report-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+  .rtab { background: none; border: none; border-bottom: 2px solid transparent; padding: 10px 16px; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); transition: all 0.15s; }
+  .rtab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+  /* Topic card */
+  .topic-card { display: flex; gap: 14px; align-items: flex-start; padding: 18px 22px; }
+  .topic-num { font-family: 'DM Mono', monospace; font-size: 20px; color: var(--dim); min-width: 28px; }
+  .topic-title { font-size: 15px; color: var(--text); margin-bottom: 5px; }
+  .topic-why { font-size: 12px; color: var(--muted); margin-bottom: 6px; line-height: 1.5; }
+  .topic-angle { font-size: 12px; color: var(--teal); font-style: italic; }
+
+  /* Relevance ring */
+  .ring { width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--gold); display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 10px; color: var(--gold); flex-shrink: 0; }
+
+  /* Momentum badge */
+  .momentum { display: inline-block; border-radius: 3px; padding: 3px 9px; font-family: 'DM Mono', monospace; font-size: 10px; margin-top: 6px; }
+
+  /* Calendar grid */
+  .cal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .cal-card { padding: 16px 18px; border-left: 3px solid var(--gold); }
+
+  /* Stat card */
+  .stat-card { padding: 20px 22px; }
+  .stat-label { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 8px; }
+  .stat-value { font-family: 'DM Serif Display', serif; font-size: 32px; margin-bottom: 4px; }
+  .stat-sub { font-size: 11px; color: var(--dim); }
+
+  /* History */
+  .hist-card { padding: 18px 22px; cursor: pointer; display: flex; gap: 16px; align-items: center; }
+  .hist-week { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--gold); text-align: center; min-width: 50px; }
+
+  /* API key box */
+  .api-box { background: var(--gold-bg); border: 1px solid var(--gold-dim); border-radius: 6px; padding: 20px 24px; margin-bottom: 28px; }
+  .api-box p { font-size: 13px; color: var(--muted); line-height: 1.6; margin-top: 8px; }
+  .api-box a { color: var(--gold); text-decoration: none; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo">⬡</div>
+    <div class="topbar-title">Strategy Analyser</div>
+    <button class="nav-btn active" onclick="showTab('dashboard')">Dashboard</button>
+    <button class="nav-btn" onclick="showTab('setup')">Setup</button>
+    <button class="nav-btn" onclick="showTab('run')">▶ Run</button>
+    <button class="nav-btn" onclick="showTab('report')">Report</button>
+    <button class="nav-btn" onclick="showTab('history')">History</button>
+    <span id="due-badge" class="badge" style="display:none">⚡ Analysis Due</span>
+  </div>
+  <div class="content">
+    <div id="tab-dashboard" class="container"></div>
+    <div id="tab-setup" class="sm-container" style="display:none"></div>
+    <div id="tab-run" class="sm-container" style="display:none"></div>
+    <div id="tab-report" class="container" style="display:none"></div>
+    <div id="tab-history" class="sm-container" style="display:none"></div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────
+let state = {
+  apiKey: localStorage.getItem('ws_api_key') || '',
+  profile: JSON.parse(localStorage.getItem('ws_profile') || '{"business":"","audience":"","goals":"","tone":"educational","platforms":["instagram","linkedin"]}'),
+  feeds: JSON.parse(localStorage.getItem('ws_feeds') || '["https://feeds.feedburner.com/entrepreneur/latest","https://rss.nytimes.com/services/xml/rss/nyt/Business.xml"]'),
+  history: JSON.parse(localStorage.getItem('ws_history') || '[]'),
+  current: JSON.parse(localStorage.getItem('ws_current') || 'null'),
+  running: false, stageIdx: -1, stageLog: [], currentTab: 'dashboard', currentRtab: 'overview'
+};
+
+function save() {
+  localStorage.setItem('ws_profile', JSON.stringify(state.profile));
+  localStorage.setItem('ws_feeds', JSON.stringify(state.feeds));
+  localStorage.setItem('ws_history', JSON.stringify(state.history));
+  if (state.current) localStorage.setItem('ws_current', JSON.stringify(state.current));
+  if (state.apiKey) localStorage.setItem('ws_api_key', state.apiKey);
+}
+
+// ── Helpers ────────────────────────────────────────────────────────
+function fmt(d) { return new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }
+function daysSince(d) { return Math.floor((Date.now()-new Date(d))/86400000); }
+function weekNum() { const d=new Date(),j=new Date(d.getFullYear(),0,1); return Math.ceil(((d-j)/86400000+j.getDay()+1)/7); }
+function isDue() { return !state.history[0] || daysSince(state.history[0].date)>=7; }
+function safeJSON(t,fb=[]) { try{return JSON.parse(t.replace(/```json|```/g,'').trim());}catch{return fb;} }
+function h(tag,attrs,inner){ const d=document.createElement(tag); if(attrs)Object.entries(attrs).forEach(([k,v])=>{ if(k==='class')d.className=v; else if(k==='style')d.style.cssText=v; else if(k.startsWith('on'))d.addEventListener(k.slice(2),v); else d.setAttribute(k,v); }); if(inner!==undefined) d.innerHTML=inner; return d; }
+function $(s){return document.querySelector(s);}
+
+const CORS = 'https://api.allorigins.win/get?url=';
+const STAGES=[{id:'rss',label:'RSS Scan',icon:'📡'},{id:'trends',label:'Trend Hunt',icon:'📈'},{id:'instagram',label:'Instagram Scan',icon:'📸'},{id:'calendar',label:'Calendar Build',icon:'🗓'},{id:'strategy',label:'Strategy Report',icon:'🎯'}];
+const PILLAR_COLORS={Educate:'#2DD4BF',Inspire:'#D4A843',Entertain:'#A78BFA',Convert:'#F87171',Community:'#60A5FA'};
+
+async function fetchRSS(url) {
+  try {
+    const r=await fetch(`${CORS}${encodeURIComponent(url)}`);
+    const d=await r.json();
+    const xml=new DOMParser().parseFromString(d.contents,'text/xml');
+    return Array.from(xml.querySelectorAll('item')).slice(0,10).map(i=>({
+      title:i.querySelector('title')?.textContent||'',
+      desc:(i.querySelector('description')?.textContent||'').replace(/<[^>]*>/g,'').slice(0,180)
+    })).filter(i=>i.title);
+  } catch{return[];}
+}
+
+async function callClaude(system, user) {
+  if(!state.apiKey) throw new Error('No API key set. Please enter your Anthropic API key in Setup.');
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':state.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,system,messages:[{role:'user',content:user}],tools:[{type:'web_search_20250305',name:'web_search'}]})
+  });
+  const data=await r.json();
+  if(data.error) throw new Error(data.error.message);
+  return data.content?.filter(b=>b.type==='text').map(b=>b.text).join('\n')||'';
+}
+
+// ── Navigation ──────────────────────────────────────────────────────
+function showTab(tab) {
+  ['dashboard','setup','run','report','history'].forEach(t=>{
+    document.getElementById(`tab-${t}`).style.display=t===tab?'block':'none';
+    document.querySelectorAll('.nav-btn').forEach((b,i)=>{ if(['dashboard','setup','run','report','history'][i]===tab) b.classList.add('active'); else b.classList.remove('active'); });
+  });
+  state.currentTab=tab;
+  renderTab(tab);
+}
+
+function renderTab(tab) {
+  const el=document.getElementById(`tab-${tab}`);
+  if(tab==='dashboard') renderDashboard(el);
+  else if(tab==='setup') renderSetup(el);
+  else if(tab==='run') renderRun(el);
+  else if(tab==='report') renderReport(el);
+  else if(tab==='history') renderHistory(el);
+  document.getElementById('due-badge').style.display=isDue()?'inline-block':'none';
+}
+
+// ── Dashboard ───────────────────────────────────────────────────────
+function renderDashboard(el) {
+  const days=state.history[0]?daysSince(state.history[0].date):null;
+  const due=isDue();
+  el.innerHTML=`
+    <div style="margin-bottom:32px">
+      <div class="mono" style="font-size:10px;color:#8A6A22;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:8px">Week ${weekNum()} · Content Intelligence</div>
+      <h1 class="serif" style="font-size:36px;font-weight:400;margin-bottom:8px;letter-spacing:-0.02em">${state.profile.business?state.profile.business.split(' ').slice(0,3).join(' ')+' Strategy':'Your Weekly Strategy'}</h1>
+      <p style="color:var(--muted);font-size:14px;line-height:1.6">${state.profile.audience?'Targeting '+state.profile.audience:'Fill in your Setup to get started.'}</p>
+    </div>
+    <div class="grid3" style="margin-bottom:24px">
+      <div class="card stat-card"><div class="stat-label">Status</div><div class="stat-value" style="color:${due?'var(--gold)':'var(--teal)'}">${due?'Due Now':days+'d ago'}</div><div class="stat-sub">${due?'Run your weekly analysis':'Analysis is fresh'}</div></div>
+      <div class="card stat-card"><div class="stat-label">Reports</div><div class="stat-value" style="color:var(--purple)">${state.history.length}</div><div class="stat-sub">${state.history.length?'Last: Week '+state.history[0]?.week:'No reports yet'}</div></div>
+      <div class="card stat-card"><div class="stat-label">Content Items</div><div class="stat-value" style="color:var(--rose)">${state.current?.calPosts?.length||0}</div><div class="stat-sub">${state.current?'14-day calendar ready':'Run analysis first'}</div></div>
+    </div>
+    ${due?`<div class="api-box" style="display:flex;align-items:center;gap:20px">
+      <div style="flex:1"><div class="mono" style="font-size:10px;color:var(--gold);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:6px">⚡ Weekly analysis due</div>
+      <p>${days?`It's been ${days} days since your last analysis.`:'You haven\'t run an analysis yet.'} Run now to get fresh topics, trends, and a 14-day content calendar.</p></div>
+      <button class="btn btn-primary" onclick="showTab('run')">Run Analysis →</button>
+    </div>`:''}
+    ${state.current?`
+    <div class="sh"><div class="sh-bar" style="height:16px"></div><div class="sh-label">Top RSS Topics This Week</div></div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:28px">
+      ${(state.current.rssTopics||[]).slice(0,4).map((t,i)=>`
+      <div class="card topic-card">
+        <div class="topic-num">0${i+1}</div>
+        <div style="flex:1"><div class="topic-title">${t.topic}</div><div class="topic-angle">💡 ${t.angle||''}</div></div>
+        <div class="ring">${Math.round((t.relevance||5)/10*100)}%</div>
+      </div>`).join('')}
+    </div>
+    <div class="sh"><div class="sh-bar" style="height:16px"></div><div class="sh-label">Strategy Summary</div></div>
+    <div class="card" style="padding:22px 24px">
+      <pre style="white-space:pre-wrap;font-size:13px;color:var(--text);line-height:1.8;font-family:Lora,serif">${(state.current.strategy||'').slice(0,500)}…</pre>
+      <button class="btn btn-ghost" style="margin-top:14px" onclick="showTab('report')">Read full report →</button>
+    </div>` : `
+    <div class="grid2" style="margin-top:8px">
+      ${[['📡','RSS Feed Scan','Pulls articles from your chosen feeds and identifies the most relevant topics for your business.'],
+         ['📈','Google Trends','Searches the web in real-time to find what\'s rising in your niche right now.'],
+         ['📸','Instagram Themes','Identifies top-performing content formats, hooks, and hashtags for your niche.'],
+         ['🗓','14-Day Calendar','Generates a complete content calendar with specific post ideas, formats, and hooks.']
+      ].map(([ic,t,d])=>`<div class="card" style="padding:20px 22px"><div style="font-size:22px;margin-bottom:10px">${ic}</div><div class="mono" style="font-size:11px;color:var(--gold);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px">${t}</div><div style="font-size:13px;color:var(--muted);line-height:1.6">${d}</div></div>`).join('')}
+    </div>`}
+  `;
+}
+
+// ── Setup ────────────────────────────────────────────────────────────
+function renderSetup(el) {
+  const p=state.profile;
+  el.innerHTML=`
+    <div class="sh lg"><div class="sh-bar"></div><div class="sh-label">API Configuration</div></div>
+    <div class="api-box" style="margin-bottom:28px">
+      <div class="form-label">Anthropic API Key</div>
+      <div class="form-hint">Get yours at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> — stored in your browser only, never sent anywhere else.</div>
+      <div style="display:flex;gap:8px">
+        <input type="password" id="api-key-input" value="${state.apiKey}" placeholder="sk-ant-..." style="flex:1;font-family:DM Mono,monospace;font-size:12px"/>
+        <button class="btn btn-ghost" onclick="state.apiKey=document.getElementById('api-key-input').value;save();alert('API key saved!')">Save Key</button>
+      </div>
+    </div>
+
+    <div class="sh lg"><div class="sh-bar"></div><div class="sh-label">Business Profile</div></div>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:24px;line-height:1.7">The more detail you add, the more targeted the analysis. Saved automatically and reused every week.</p>
+
+    <div class="form-row">
+      <label class="form-label">Business Description</label>
+      <div class="form-hint">What you do, your niche, your unique angle</div>
+      <textarea id="s-business" rows="4" placeholder="e.g. A sustainable skincare brand for women 25–40 who prioritise clean ingredients and ethical sourcing…">${p.business}</textarea>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Target Audience</label>
+      <div class="form-hint">Age, interests, pain points, where they hang out online</div>
+      <textarea id="s-audience" rows="3" placeholder="e.g. Women 25–40, health-conscious, follow wellness influencers…">${p.audience}</textarea>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Business Goals</label>
+      <div class="form-hint">What you want content to achieve</div>
+      <textarea id="s-goals" rows="3" placeholder="e.g. Grow Instagram to 10k followers, drive email sign-ups, convert warm leads…">${p.goals}</textarea>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Content Tone</label>
+      <div class="pill-wrap" id="tone-pills">
+        ${['educational','inspirational','conversational','authoritative','playful','professional'].map(t=>`<span class="pill ${p.tone===t?'active-gold':''}" onclick="selectTone('${t}')">${t}</span>`).join('')}
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Platforms</label>
+      <div class="pill-wrap" id="plat-pills">
+        ${['instagram','linkedin','twitter','tiktok','facebook','youtube','blog'].map(pl=>`<span class="pill ${p.platforms.includes(pl)?'active':''}" onclick="togglePlat('${pl}')">${pl}</span>`).join('')}
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="saveProfile()">Save Profile</button>
+
+    <hr style="border:none;border-top:1px solid var(--border);margin:40px 0"/>
+
+    <div class="sh lg"><div class="sh-bar"></div><div class="sh-label">RSS Feeds</div></div>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:20px;line-height:1.7">Add industry news sources to scan for topics. Find RSS URLs by searching "[site name] RSS feed".</p>
+    <div id="feed-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+    <div style="display:flex;gap:8px;margin-bottom:20px">
+      <input id="new-feed" placeholder="https://example.com/feed.xml" style="flex:1;font-family:DM Mono,monospace;font-size:12px" onkeydown="if(event.key==='Enter')addFeed()"/>
+      <button class="btn btn-ghost" onclick="addFeed()">+ Add</button>
+    </div>
+    <div class="card" style="padding:16px 20px">
+      <div class="mono" style="font-size:10px;color:var(--gold);letter-spacing:0.1em;margin-bottom:12px">SUGGESTED FEEDS</div>
+      ${[['Marketing Week','https://www.marketingweek.com/feed/'],['HBR','https://feeds.hbr.org/harvardbusiness'],['Social Media Examiner','https://www.socialmediaexaminer.com/feed/'],['Content Marketing Inst.','https://contentmarketinginstitute.com/feed/'],['TechCrunch','https://techcrunch.com/feed/']].map(([n,u])=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:12px;color:var(--muted);flex:1">${n}</span>
+        <button class="btn btn-ghost btn-sm" onclick="addSpecificFeed('${u}')">${state.feeds.includes(u)?'Added ✓':'+ Add'}</button>
+      </div>`).join('')}
+    </div>
+  `;
+  renderFeedList();
+}
+
+function renderFeedList() {
+  const el=document.getElementById('feed-list'); if(!el) return;
+  el.innerHTML=state.feeds.map((f,i)=>`
+    <div style="display:flex;gap:8px;align-items:center">
+      <div style="flex:1;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:4px;font-family:DM Mono,monospace;font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f}</div>
+      <button class="btn btn-ghost btn-sm" style="color:var(--rose);border-color:var(--border)" onclick="removeFeed(${i})">✕</button>
+    </div>`).join('');
+}
+function addFeed(){const v=document.getElementById('new-feed').value.trim();if(v&&!state.feeds.includes(v)){state.feeds.push(v);save();renderFeedList();document.getElementById('new-feed').value='';}}
+function addSpecificFeed(u){if(!state.feeds.includes(u)){state.feeds.push(u);save();renderSetup(document.getElementById('tab-setup'));}}
+function removeFeed(i){state.feeds.splice(i,1);save();renderFeedList();}
+function selectTone(t){state.profile.tone=t;document.querySelectorAll('#tone-pills .pill').forEach(p=>{p.className='pill'+(p.textContent===t?' active-gold':'');});}
+function togglePlat(pl){const i=state.profile.platforms.indexOf(pl);if(i>=0)state.profile.platforms.splice(i,1);else state.profile.platforms.push(pl);document.querySelectorAll('#plat-pills .pill').forEach(p=>{p.className='pill'+(state.profile.platforms.includes(p.textContent)?' active':'');});}
+function saveProfile(){state.profile.business=document.getElementById('s-business').value;state.profile.audience=document.getElementById('s-audience').value;state.profile.goals=document.getElementById('s-goals').value;save();alert('Profile saved! ✓');}
+
+// ── Run ──────────────────────────────────────────────────────────────
+function renderRun(el) {
+  const days=state.history[0]?daysSince(state.history[0].date):null;
+  const due=isDue();
+  el.innerHTML=`
+    <div class="sh lg"><div class="sh-bar"></div><div class="sh-label">Weekly Analysis Run</div></div>
+    <p style="color:var(--muted);font-size:13px;line-height:1.7;margin-bottom:24px">Runs through 5 stages — RSS scan, Google Trends, Instagram, 14-day calendar, and strategy report. Takes 60–90 seconds.</p>
+    <div class="card" style="padding:18px 22px;margin-bottom:20px;display:flex;gap:14px;align-items:center">
+      <div style="width:10px;height:10px;border-radius:50%;background:${due?'var(--gold)':'var(--teal)'}"></div>
+      <div class="mono" style="font-size:11px;color:${due?'var(--gold)':'var(--teal)'};letter-spacing:0.1em;text-transform:uppercase">
+        ${due?(days?days+' days since last run — due now':'No analysis run yet'):`Last run ${days} days ago — still fresh`}
+      </div>
+    </div>
+    <div class="stage-list" id="stage-list">
+      ${STAGES.map((s,i)=>`<div class="stage-item" id="stage-${i}"><div class="stage-icon">${s.icon}</div><div class="stage-name">${s.label}</div><div class="stage-status mono" style="font-size:11px;color:var(--dim)">Pending</div></div>`).join('')}
+    </div>
+    <div id="run-log" class="log" style="display:none"></div>
+    ${!state.apiKey?'<div style="color:var(--rose);font-size:12px;font-family:DM Mono,monospace;margin-bottom:12px">⚠ No API key set. Go to Setup first.</div>':''}
+    ${!state.profile.business?'<div style="color:var(--rose);font-size:12px;font-family:DM Mono,monospace;margin-bottom:12px">⚠ No business profile set. Go to Setup first.</div>':''}
+    <button id="run-btn" class="btn btn-primary" style="width:100%" onclick="runAnalysis()" ${(!state.apiKey||!state.profile.business)?'disabled':''}>▶ Run Full Weekly Analysis</button>
+    <div style="margin-top:24px;padding:16px 20px;background:var(--surface);border:1px solid var(--border);border-radius:5px">
+      <div class="mono" style="font-size:10px;color:var(--gold);letter-spacing:0.15em;margin-bottom:8px">⏰ MAKE IT WEEKLY</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6">Run this every Monday morning before planning your week's content. Your settings and history are saved automatically. Pair with the Content Creator tool to write the actual posts.</div>
+    </div>
+  `;
+}
+
+async function runAnalysis() {
+  if(state.running||!state.apiKey||!state.profile.business) return;
+  state.running=true; state.stageLog=[];
+  document.getElementById('run-btn').disabled=true;
+  document.getElementById('run-btn').textContent='Analysing…';
+  const logEl=document.getElementById('run-log');
+  logEl.style.display='block';
+  const ctx=`Business: ${state.profile.business}\nAudience: ${state.profile.audience}\nGoals: ${state.profile.goals}\nTone: ${state.profile.tone}\nPlatforms: ${state.profile.platforms.join(', ')}`;
+
+  function setStage(i){
+    state.stageIdx=i;
+    STAGES.forEach((_,j)=>{
+      const el=document.getElementById(`stage-${j}`);
+      if(!el) return;
+      el.className='stage-item'+(j<i?' done':j===i?' active':'');
+      el.querySelector('.stage-status').textContent=j<i?'✓ Done':j===i?'Running…':'Pending';
+      el.querySelector('.stage-status').style.color=j<i?'var(--teal)':j===i?'var(--teal)':'var(--dim)';
+    });
+  }
+  function log(m){logEl.innerHTML+=`<div>${m}</div>`;logEl.scrollTop=logEl.scrollHeight;}
+
+  try {
+    setStage(0); log('Fetching RSS feeds…');
+    let articles=[];
+    for(const url of state.feeds.slice(0,4)){
+      const items=await fetchRSS(url);
+      articles=[...articles,...items];
+      log(`  ✓ ${url.split('/')[2]||url} — ${items.length} articles`);
+    }
+    const rssText=articles.length?articles.map(a=>`• ${a.title}: ${a.desc}`).join('\n'):'No RSS fetched — search for industry news instead.';
+
+    const rssRaw=await callClaude('Return ONLY a JSON array of 6 objects with keys: topic (string), relevance (1-10), why (max 60 chars), angle (creative content angle, max 80 chars). No markdown.',`Context:\n${ctx}\n\nArticles:\n${rssText}`);
+    const rssTopics=safeJSON(rssRaw);
+
+    setStage(1); log('Searching Google Trends…');
+    const tRaw=await callClaude('Use web_search to find what is trending RIGHT NOW in the business niche. Return ONLY a JSON array of 5 objects: trend, momentum ("rising"|"peaked"|"declining"), urgency (1-10), content_hook (max 100 chars). No markdown.',`Find trending topics for:\n${ctx}`);
+    const trendTopics=safeJSON(tRaw);
+
+    setStage(2); log('Scanning Instagram…');
+    const igRaw=await callClaude('Use web_search to find top-performing Instagram content in this niche. Return ONLY a JSON array of 5 objects: theme, format ("Reel"|"Carousel"|"Story"|"Static Post"), hook (max 80 chars), hashtags (array of 4), why_now (max 60 chars). No markdown.',`Context:\n${ctx}`);
+    const igThemes=safeJSON(igRaw);
+
+    setStage(3); log('Building 14-day calendar…');
+    const calRaw=await callClaude('Create a 14-day content calendar. Return ONLY a JSON array of 14 objects: day (1-14), platform (string), type ("Reel"|"Carousel"|"Post"|"Story"|"Article"|"Thread"), topic (string), hook (max 80 chars), pillar ("Educate"|"Inspire"|"Entertain"|"Convert"|"Community"). No markdown.',`Context:\n${ctx}\n\nTop topics:${JSON.stringify([...rssTopics.slice(0,3),...trendTopics.slice(0,3)])}`);
+    const calPosts=safeJSON(calRaw);
+
+    setStage(4); log('Writing strategy report…');
+    const strategy=await callClaude('Write a punchy, actionable weekly strategy report. Include: 3 content pillars with rationale, the biggest opportunity this week, one big swing idea, and 3 things to avoid. Direct and specific. Max 300 words. Plain text only.', `Context:\n${ctx}\n\nData:\nRSS: ${JSON.stringify(rssTopics)}\nTrends: ${JSON.stringify(trendTopics)}\nIG: ${JSON.stringify(igThemes)}`);
+
+    const report={date:new Date().toISOString(),week:weekNum(),rssTopics,trendTopics,igThemes,calPosts,strategy};
+    state.current=report;
+    state.history=[report,...state.history].slice(0,8);
+    save();
+    log('✓ Analysis complete!');
+    setTimeout(()=>showTab('report'),800);
+  } catch(e) {
+    log('⚠ Error: '+e.message);
+  } finally {
+    state.running=false;
+    const btn=document.getElementById('run-btn');
+    if(btn){btn.disabled=false;btn.textContent='▶ Run Full Weekly Analysis';}
+  }
+}
+
+// ── Report ──────────────────────────────────────────────────────────
+function renderReport(el) {
+  if(!state.current){el.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted);font-family:DM Mono,monospace;font-size:13px">No report yet. Run an analysis first.</div>';return;}
+  const d=state.current;
+  const rt=state.currentRtab;
+  const pillarCounts={};
+  (d.calPosts||[]).forEach(p=>{pillarCounts[p.pillar]=(pillarCounts[p.pillar]||0)+1;});
+
+  el.innerHTML=`
+    <div style="margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--border)">
+      <div class="mono" style="font-size:10px;color:var(--gold-dim);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:6px">Week ${d.week} · ${fmt(d.date)}</div>
+      <h2 class="serif" style="font-size:28px;font-weight:400;margin-bottom:4px">Weekly Strategy Report</h2>
+      <div style="font-size:13px;color:var(--muted)">${(d.calPosts||[]).length} content ideas · ${(d.rssTopics||[]).length} topics · ${(d.trendTopics||[]).length} trends</div>
+    </div>
+    <div class="report-tabs">
+      ${[['overview','Overview'],['rss','📡 RSS Topics'],['trends','📈 Trends'],['instagram','📸 Instagram'],['calendar','🗓 14-Day Calendar']].map(([id,lb])=>`<button class="rtab ${rt===id?'active':''}" onclick="switchRtab('${id}')">${lb}</button>`).join('')}
+    </div>
+    <div id="rtab-content">${renderRtab(d,rt)}</div>
+  `;
+}
+
+function switchRtab(rt){state.currentRtab=rt;const el=document.getElementById('rtab-content');if(el)el.innerHTML=renderRtab(state.current,rt);document.querySelectorAll('.rtab').forEach(b=>{b.className='rtab'+(b.textContent.includes(rt)||(rt==='overview'&&b.textContent==='Overview')?' active':'');});}
+
+function renderRtab(d,rt) {
+  if(rt==='overview'){
+    const pillarCounts={};(d.calPosts||[]).forEach(p=>{pillarCounts[p.pillar]=(pillarCounts[p.pillar]||0)+1;});
+    return `<div class="grid2" style="margin-bottom:20px">
+      <div class="card" style="padding:22px 24px;grid-column:1/-1"><div class="mono" style="font-size:10px;color:var(--gold);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:14px">Strategy Summary</div><pre style="white-space:pre-wrap;font-size:13px;color:var(--text);line-height:1.85;font-family:Lora,serif">${d.strategy}</pre></div>
+      <div class="card" style="padding:22px 24px"><div class="mono" style="font-size:10px;color:var(--gold);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:14px">Content Pillar Mix</div>${Object.entries(pillarCounts).map(([n,c])=>`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px">${n}</span><span class="mono" style="font-size:11px;color:var(--muted)">${c} posts</span></div><div style="height:4px;background:var(--border);border-radius:2px"><div style="height:4px;border-radius:2px;background:var(--gold);width:${(c/14)*100}%"></div></div></div>`).join('')}</div>
+      <div class="card" style="padding:22px 24px"><div class="mono" style="font-size:10px;color:var(--gold);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:14px">Rising Opportunities</div>${(d.trendTopics||[]).filter(t=>(t.momentum||'').toLowerCase().includes('rising')).slice(0,2).map(t=>`<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)"><div style="font-size:14px;color:var(--text);margin-bottom:4px">${t.trend}</div><div style="font-size:11px;color:var(--muted);line-height:1.5">${t.content_hook}</div><span class="momentum" style="background:var(--surface);border:1px solid rgba(45,212,191,0.3);color:var(--teal)">↑ Rising</span></div>`).join('')||'<div style="color:var(--dim);font-size:12px">No rising trends detected this week.</div>'}</div>
+    </div>`;
+  }
+  if(rt==='rss') return `<div style="display:flex;flex-direction:column;gap:12px">${(d.rssTopics||[]).map((t,i)=>`<div class="card topic-card"><div class="topic-num">0${i+1}</div><div style="flex:1"><div class="topic-title">${t.topic}</div><div class="topic-why">${t.why}</div><div class="topic-angle">💡 ${t.angle||''}</div></div><div class="ring">${Math.round((t.relevance||5)/10*100)}%</div></div>`).join('')}</div>`;
+  if(rt==='trends') return `<div style="display:flex;flex-direction:column;gap:12px">${(d.trendTopics||[]).map((t,i)=>{const m=(t.momentum||'').toLowerCase();const[mc,ml]=m.includes('rising')?['var(--teal)','↑ Rising']:m.includes('peak')?['var(--gold)','⬤ Peaked']:['var(--dim)','↓ Declining'];return`<div class="card" style="padding:18px 22px"><div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:10px"><div class="topic-num">0${i+1}</div><div style="flex:1"><div style="font-size:15px;color:var(--text);margin-bottom:4px">${t.trend}</div><div style="font-size:12px;color:var(--muted)">Urgency: ${t.urgency}/10</div></div><span class="momentum" style="background:var(--surface);border:1px solid ${mc}44;color:${mc}">${ml}</span></div><div style="margin-left:42px;padding:10px 14px;background:var(--surface);border-radius:4px;font-size:13px;color:var(--gold);font-style:italic">"${t.content_hook}"</div></div>`}).join('')}`;
+  if(rt==='instagram') return `<div style="display:flex;flex-direction:column;gap:12px">${(d.igThemes||[]).map((t,i)=>`<div class="card" style="padding:18px 22px"><div style="display:flex;gap:14px;align-items:center;margin-bottom:10px"><div class="topic-num">0${i+1}</div><div style="flex:1"><div style="font-size:15px;color:var(--text)">${t.theme}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${t.why_now||''}</div></div><span style="background:#1A1028;border:1px solid rgba(167,139,250,0.3);color:var(--purple);border-radius:3px;padding:4px 10px;font-size:10px;font-family:DM Mono,monospace">${t.format}</span></div><div style="margin-left:42px;margin-bottom:10px;font-size:13px;color:var(--gold);font-style:italic">"${t.hook}"</div><div style="margin-left:42px;display:flex;gap:6px;flex-wrap:wrap">${(t.hashtags||[]).map(h=>`<span style="background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:3px 8px;font-size:10px;font-family:DM Mono,monospace;color:var(--muted)">#${h.replace(/^#/,'')}</span>`).join('')}</div></div>`).join('')}`;
+  if(rt==='calendar') return `<div class="cal-grid">${(d.calPosts||[]).map((p,i)=>{const col=PILLAR_COLORS[p.pillar]||'var(--muted)';return`<div class="card cal-card" style="border-left-color:${col}"><div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="mono" style="font-size:10px;color:var(--dim)">Day ${p.day}</span><span class="mono" style="font-size:10px;color:${col};margin-left:auto">${p.pillar}</span><span class="mono" style="font-size:10px;color:var(--muted);background:var(--surface);padding:2px 6px;border-radius:3px">${p.type}</span></div><div style="font-size:13px;color:var(--text);margin-bottom:6px">${p.topic}</div><div style="font-size:11px;color:var(--muted);font-style:italic">"${p.hook}"</div><div style="margin-top:6px;font-size:10px;font-family:DM Mono,monospace;color:var(--dim);text-transform:uppercase">${p.platform}</div></div>`}).join('')}</div>`;
+  return '';
+}
+
+// ── History ─────────────────────────────────────────────────────────
+function renderHistory(el) {
+  if(!state.history.length){el.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted);font-family:DM Mono,monospace;font-size:13px">No history yet. Run your first analysis.</div>';return;}
+  el.innerHTML=`
+    <div class="sh lg"><div class="sh-bar"></div><div class="sh-label">Report History</div></div>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:24px">Your last ${state.history.length} weekly reports. Click any to view.</p>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      ${state.history.map((r,i)=>`
+      <div class="card hist-card" onclick="loadHistoryReport(${i})">
+        <div><div class="hist-week">W${r.week}</div><div class="mono" style="font-size:9px;color:var(--dim);text-transform:uppercase;text-align:center">${new Date(r.date).getFullYear()}</div></div>
+        <div style="flex:1"><div style="font-size:14px;color:var(--text);margin-bottom:4px">${fmt(r.date)}</div><div style="font-size:11px;color:var(--muted)">${(r.rssTopics||[]).slice(0,2).map(t=>t.topic).join(' · ')}</div></div>
+        <div class="mono" style="font-size:11px;color:var(--teal)">${(r.calPosts||[]).length} posts →</div>
+      </div>`).join('')}
+    </div>
+  `;
+}
+function loadHistoryReport(i){state.current=state.history[i];state.currentRtab='overview';showTab('report');}
+
+// ── Init ────────────────────────────────────────────────────────────
+showTab('dashboard');
+</script>
+</body>
+</html>

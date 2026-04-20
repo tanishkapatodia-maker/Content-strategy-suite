@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Content Creator · Content Intelligence</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,500;1,400&display=swap');
+  :root {
+    --bg: #08070A; --surface: #100F16; --card: #14131C;
+    --border: #221F30; --border2: #352E4A;
+    --violet: #7C6EF0; --violet-dim: #4A408A; --violet-bg: #0C0B18;
+    --rose: #F472B6; --teal: #2DD4BF; --amber: #FBBF24; --emerald: #34D399;
+    --text: #E8E4F0; --muted: #7A708A; --dim: #3A3550;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Lora', serif; min-height: 100vh; }
+  ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: var(--bg); } ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .mono { font-family: 'DM Mono', monospace; }
+  .serif { font-family: 'DM Serif Display', serif; }
+
+  /* Layout */
+  #app { display: flex; flex-direction: column; min-height: 100vh; }
+  .topbar { background: var(--bg); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; align-items: center; gap: 6px; height: 52px; position: sticky; top: 0; z-index: 100; }
+  .topbar-logo { font-size: 18px; color: var(--violet); }
+  .topbar-title { font-family: 'DM Serif Display', serif; font-size: 16px; margin-right: 24px; }
+  .nav-btn { background: none; border: none; border-bottom: 2px solid transparent; padding: 8px 14px; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); transition: all 0.15s; }
+  .nav-btn.active { color: var(--violet); border-bottom-color: var(--violet); }
+  .nav-btn:hover { color: var(--text); }
+  .content { flex: 1; overflow: auto; }
+
+  /* Main layout */
+  .workspace { display: grid; grid-template-columns: 340px 1fr; gap: 0; height: calc(100vh - 52px); }
+  .left-panel { border-right: 1px solid var(--border); overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 18px; }
+  .right-panel { overflow-y: auto; padding: 24px; }
+
+  /* Cards */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; }
+  .card:hover { border-color: var(--border2); }
+
+  /* Form elements */
+  input, textarea, select {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+    color: var(--text); outline: none; font-family: 'Lora', serif; font-size: 13px;
+    padding: 10px 14px; width: 100%; transition: border-color 0.15s;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--violet-dim); }
+  textarea { resize: vertical; line-height: 1.6; }
+  .form-label { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--violet); letter-spacing: 0.14em; text-transform: uppercase; display: block; margin-bottom: 6px; }
+
+  /* Pills */
+  .pill-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill { border-radius: 4px; padding: 5px 10px; font-size: 10px; font-family: 'DM Mono', monospace; letter-spacing: 0.06em; cursor: pointer; transition: all 0.15s; border: 1px solid var(--border); background: transparent; color: var(--muted); }
+  .pill.active { border-color: var(--violet-dim); color: var(--violet); background: var(--violet-bg); }
+  .pill.active-rose { border-color: rgba(244,114,182,0.4); color: var(--rose); background: #180D14; }
+  .pill.active-teal { border-color: rgba(45,212,191,0.4); color: var(--teal); background: #0A1A18; }
+  .pill.active-amber { border-color: rgba(251,191,36,0.4); color: var(--amber); background: #1A1400; }
+
+  /* Buttons */
+  .btn { border: none; border-radius: 4px; cursor: pointer; font-family: 'DM Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; transition: all 0.15s; }
+  .btn-primary { background: var(--violet); color: #fff; padding: 13px 24px; font-size: 11px; font-weight: 700; width: 100%; }
+  .btn-primary:hover { filter: brightness(1.1); }
+  .btn-primary:disabled { background: var(--card); color: var(--muted); cursor: not-allowed; }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 7px 14px; font-size: 10px; }
+  .btn-ghost:hover { border-color: var(--border2); color: var(--text); }
+  .btn-copy { background: var(--surface); border: 1px solid var(--border); color: var(--muted); padding: 6px 12px; font-size: 10px; border-radius: 3px; cursor: pointer; transition: all 0.15s; }
+  .btn-copy:hover { border-color: var(--teal); color: var(--teal); }
+
+  /* Section head */
+  .sh { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .sh-bar { width: 2px; height: 14px; border-radius: 2px; background: var(--violet); }
+  .sh-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+
+  /* Output card */
+  .output-card { border-radius: 8px; border: 1px solid var(--border); overflow: hidden; margin-bottom: 16px; }
+  .output-header { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .output-badge { border-radius: 3px; padding: 3px 9px; font-size: 10px; font-family: 'DM Mono', monospace; }
+  .output-body { padding: 20px 22px; }
+  .output-text { font-size: 14px; line-height: 1.85; white-space: pre-wrap; color: var(--text); }
+  .output-meta { padding: 12px 18px; border-top: 1px solid var(--border); background: var(--surface); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .meta-tag { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--muted); background: var(--card); border: 1px solid var(--border); border-radius: 3px; padding: 3px 8px; }
+
+  /* Platform icon mapping */
+  .plat-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+  /* Spinner */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--violet); border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
+
+  /* Draft list */
+  .draft-item { padding: 14px 18px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
+  .draft-item:hover { background: var(--surface); }
+  .draft-item:last-child { border-bottom: none; }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 13px; }
+  .empty-icon { font-size: 40px; margin-bottom: 16px; }
+
+  /* Tabs */
+  .tab-bar { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  .tab-btn { background: none; border: none; border-bottom: 2px solid transparent; padding: 10px 16px; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); transition: all 0.15s; }
+  .tab-btn.active { color: var(--violet); border-bottom-color: var(--violet); }
+
+  /* Settings tab */
+  .sm-container { max-width: 580px; margin: 0 auto; padding: 28px 24px; }
+  .api-box { background: var(--violet-bg); border: 1px solid var(--violet-dim); border-radius: 6px; padding: 18px 22px; margin-bottom: 24px; }
+  .api-box a { color: var(--violet); text-decoration: none; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo">◈</div>
+    <div class="topbar-title">Content Creator</div>
+    <button class="nav-btn active" onclick="showMain('create')">✦ Create</button>
+    <button class="nav-btn" onclick="showMain('drafts')">Drafts</button>
+    <button class="nav-btn" onclick="showMain('brand')">Brand Voice</button>
+    <button class="nav-btn" onclick="showMain('settings')">Settings</button>
+  </div>
+  <div class="content" id="main-content"></div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────
+let state = {
+  apiKey: localStorage.getItem('cc_api_key') || '',
+  brand: JSON.parse(localStorage.getItem('cc_brand') || JSON.stringify({
+    name: '', description: '', audience: '', tone: 'conversational',
+    adjectives: ['authentic','educational','approachable'],
+    avoid: ['salesy','jargon','emojis everywhere'],
+    cta_style: 'soft',
+    signature_phrases: '',
+  })),
+  drafts: JSON.parse(localStorage.getItem('cc_drafts') || '[]'),
+  currentView: 'create',
+  generating: false,
+  outputs: [],
+  form: {
+    topic: '', platform: 'instagram', contentType: 'caption', angle: '',
+    tone: 'on-brand', length: 'medium', variations: 2,
+  }
+};
+
+function save() {
+  localStorage.setItem('cc_brand', JSON.stringify(state.brand));
+  localStorage.setItem('cc_drafts', JSON.stringify(state.drafts));
+  if(state.apiKey) localStorage.setItem('cc_api_key', state.apiKey);
+}
+
+const PLATFORMS = {
+  instagram: { color: '#E040FB', icon: '📸', types: ['Caption + Hooks', 'Carousel Script', 'Reel Hook + Script', 'Story Sequence', 'Bio Rewrite'] },
+  linkedin: { color: '#0EA5E9', icon: '💼', types: ['Long-form Post', 'Short Insight', 'Carousel Copy', 'Article Intro', 'Comment Hook'] },
+  twitter: { color: '#60A5FA', icon: '🐦', types: ['Thread', 'Single Tweet', 'Quote Tweet Angle', 'Pinned Tweet'] },
+  tiktok: { color: '#F87171', icon: '🎵', types: ['Video Hook + Script', 'Trend Angle', 'Voiceover Script', 'Series Idea'] },
+  facebook: { color: '#818CF8', icon: '📘', types: ['Post + Boost Copy', 'Group Post', 'Ad Copy Pair'] },
+  blog: { color: '#34D399', icon: '✍️', types: ['Full Article', 'Intro Only', 'SEO Outline', 'Listicle', 'How-To'] },
+  email: { color: '#FBBF24', icon: '📧', types: ['Newsletter Section', 'Welcome Email', 'Promotional Email', 'Re-engagement'] },
+};
+
+const TONES = ['on-brand','educational','inspirational','urgent','conversational','humorous','authoritative','personal story'];
+const LENGTHS = { short: 'Short (punchy)', medium: 'Medium (balanced)', long: 'Long (detailed)' };
+const ANGLES = ['Trending angle','Educational how-to','Controversial take','Behind the scenes','Social proof / case study','Problem → Solution','Story-led','Data-driven','Myth-busting','Challenge/call to action'];
+
+async function callClaude(system, user) {
+  if(!state.apiKey) throw new Error('No API key. Go to Settings first.');
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','x-api-key':state.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1500, system, messages: [{role:'user',content:user}] })
+  });
+  const data = await r.json();
+  if(data.error) throw new Error(data.error.message);
+  return data.content?.filter(b=>b.type==='text').map(b=>b.text).join('\n') || '';
+}
+
+// ── Navigation ───────────────────────────────────────────────────────
+function showMain(view) {
+  state.currentView = view;
+  document.querySelectorAll('.nav-btn').forEach((b,i) => {
+    const views = ['create','drafts','brand','settings'];
+    b.className = 'nav-btn' + (views[i]===view?' active':'');
+  });
+  render();
+}
+
+function render() {
+  const el = document.getElementById('main-content');
+  if(state.currentView === 'create') renderCreate(el);
+  else if(state.currentView === 'drafts') renderDrafts(el);
+  else if(state.currentView === 'brand') renderBrand(el);
+  else if(state.currentView === 'settings') renderSettings(el);
+}
+
+// ── Create View ───────────────────────────────────────────────────────
+function renderCreate(el) {
+  const f = state.form;
+  const plat = PLATFORMS[f.platform];
+  el.innerHTML = `
+    <div class="workspace">
+      <div class="left-panel">
+        <!-- Topic -->
+        <div>
+          <div class="sh"><div class="sh-bar"></div><div class="sh-label">Topic / Brief</div></div>
+          <textarea id="f-topic" rows="4" placeholder="What is this content about? Paste a topic from the Strategy Analyser, or describe it in your own words…&#10;&#10;e.g. 'The rise of slow beauty and why consumers are ditching 10-step routines'">${f.topic}</textarea>
+          <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+            ${ANGLES.map(a=>`<span class="pill ${f.angle===a?'active-amber':''}" style="font-size:9px" onclick="setAngle('${a}')">${a}</span>`).join('')}
+          </div>
+        </div>
+
+        <!-- Platform -->
+        <div>
+          <div class="sh"><div class="sh-bar"></div><div class="sh-label">Platform</div></div>
+          <div class="pill-grid">
+            ${Object.entries(PLATFORMS).map(([id,p])=>`<span class="pill ${f.platform===id?'active':''}" onclick="setPlatform('${id}')" style="${f.platform===id?'border-color:'+p.color+'66;color:'+p.color+';background:'+p.color+'11':''}">${p.icon} ${id}</span>`).join('')}
+          </div>
+        </div>
+
+        <!-- Content Type -->
+        <div>
+          <div class="sh"><div class="sh-bar"></div><div class="sh-label">Content Type</div></div>
+          <div class="pill-grid" id="type-pills">
+            ${plat.types.map(t=>`<span class="pill ${f.contentType===t?'active-rose':''}" onclick="setType('${t}')">${t}</span>`).join('')}
+          </div>
+        </div>
+
+        <!-- Tone & Length -->
+        <div>
+          <div class="sh"><div class="sh-bar"></div><div class="sh-label">Tone</div></div>
+          <div class="pill-grid">
+            ${TONES.map(t=>`<span class="pill ${f.tone===t?'active':''}" onclick="setTone('${t}')">${t}</span>`).join('')}
+          </div>
+        </div>
+        <div>
+          <div class="sh"><div class="sh-bar"></div><div class="sh-label">Length</div></div>
+          <div class="pill-grid">
+            ${Object.entries(LENGTHS).map(([id,lb])=>`<span class="pill ${f.length===id?'active-teal':''}" onclick="setLength('${id}')">${lb}</span>`).join('')}
+          </div>
+        </div>
+
+        <!-- Variations -->
+        <div>
+          <div class="sh"><div class="sh-bar"></div><div class="sh-label">Variations</div></div>
+          <div class="pill-grid">
+            ${[1,2,3].map(n=>`<span class="pill ${f.variations===n?'active':''}" onclick="setVariations(${n})">${n} variation${n>1?'s':''}</span>`).join('')}
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="gen-btn" onclick="generate()" ${state.generating?'disabled':''}>
+          ${state.generating?'<span class="spinner"></span>Generating…':'✦ Generate Content'}
+        </button>
+        ${!state.apiKey?'<div style="font-size:11px;color:var(--rose);font-family:DM Mono,monospace;text-align:center">⚠ Set your API key in Settings</div>':''}
+      </div>
+
+      <div class="right-panel">
+        ${state.outputs.length === 0 ? renderEmpty() : renderOutputs()}
+      </div>
+    </div>
+  `;
+}
+
+function renderEmpty() {
+  return `<div class="empty">
+    <div class="empty-icon">◈</div>
+    <div style="font-size:16px;margin-bottom:8px;font-family:'DM Serif Display',serif;color:var(--text)">Ready to create</div>
+    <div>Fill in your brief on the left and click Generate.</div>
+    <div style="margin-top:12px;font-size:11px">Tip: paste a topic directly from the Strategy Analyser for best results.</div>
+  </div>`;
+}
+
+function renderOutputs() {
+  const plat = PLATFORMS[state.form.platform];
+  return state.outputs.map((o,i) => `
+    <div class="output-card">
+      <div class="output-header">
+        <span style="color:${plat.color};font-size:16px">${plat.icon}</span>
+        <span class="mono" style="font-size:11px;color:var(--text);flex:1">${state.form.contentType} · Variation ${i+1}</span>
+        <button class="btn-copy" onclick="copyOutput(${i})">Copy</button>
+        <button class="btn-copy" style="margin-left:4px;border-color:rgba(52,211,153,0.4);color:var(--emerald)" onclick="saveDraft(${i})">Save Draft</button>
+      </div>
+      <div class="output-body">
+        <div class="output-text">${escHtml(o.content)}</div>
+        ${o.hook?`<div style="margin-top:16px;padding:12px 14px;background:var(--surface);border-radius:4px;border-left:3px solid ${plat.color}"><div class="mono" style="font-size:9px;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:6px">Hook</div><div style="font-size:13px;color:var(--amber);font-style:italic">"${escHtml(o.hook)}"</div></div>`:''}
+        ${o.cta?`<div style="margin-top:10px;padding:10px 14px;background:var(--surface);border-radius:4px"><div class="mono" style="font-size:9px;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px">CTA</div><div style="font-size:13px;color:var(--emerald)">${escHtml(o.cta)}</div></div>`:''}
+      </div>
+      ${o.hashtags&&o.hashtags.length?`<div class="output-meta"><span class="mono" style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:0.1em;margin-right:4px">Tags</span>${o.hashtags.map(h=>`<span class="meta-tag">#${h.replace(/^#/,'')}</span>`).join('')}</div>`:''}
+      ${o.visual?`<div class="output-meta" style="border-top:1px solid var(--border)"><span class="mono" style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:0.1em;margin-right:6px">Visual Brief</span><span style="font-size:12px;color:var(--muted)">${escHtml(o.visual)}</span></div>`:''}
+    </div>
+  `).join('') + `
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-ghost" onclick="generate()">↻ Regenerate</button>
+      <button class="btn btn-ghost" onclick="state.outputs=[];render()">✕ Clear</button>
+    </div>`;
+}
+
+function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── Generate ────────────────────────────────────────────────────────
+async function generate() {
+  const topic = document.getElementById('f-topic')?.value || state.form.topic;
+  state.form.topic = topic;
+  if(!topic.trim()) { alert('Please enter a topic or brief.'); return; }
+  if(!state.apiKey) { showMain('settings'); return; }
+  state.generating = true; state.outputs = [];
+  render();
+
+  const b = state.brand;
+  const f = state.form;
+  const brandCtx = b.name ? `Brand: ${b.name}\nDescription: ${b.description}\nAudience: ${b.audience}\nTone adjectives: ${b.adjectives.join(', ')}\nAvoid: ${b.avoid.join(', ')}\nCTA style: ${b.cta_style}${b.signature_phrases?'\nSignature phrases to consider: '+b.signature_phrases:''}` : 'No brand profile set — use a professional, helpful tone.';
+  const lengthGuide = { short: 'Keep it concise, maximum 100 words for body copy.', medium: '150-250 words for body copy.', long: '300-500 words for body copy.' }[f.length];
+  const angleNote = f.angle ? `Use this specific angle: ${f.angle}.` : '';
+
+  const system = `You are an expert content writer specialising in ${f.platform} content. You write compelling, platform-native content that gets real engagement.
+${brandCtx}
+Output format: Return ONLY a JSON array of ${f.variations} objects, each with: content (string, the main content piece), hook (attention-grabbing first line, max 80 chars), cta (call to action, max 60 chars), hashtags (array of 8-10 strings without #), visual (brief for visual/creative direction, max 80 chars). No markdown, no backticks, pure JSON array.`;
+
+  const user = `Create ${f.variations} variation(s) of ${f.contentType} for ${f.platform}.
+Topic: ${topic}
+Tone: ${f.tone}
+${lengthGuide}
+${angleNote}
+Make each variation meaningfully different — different hook, different structure, different angle. Write like a real person, not an AI.`;
+
+  try {
+    const raw = await callClaude(system, user);
+    const parsed = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    state.outputs = Array.isArray(parsed) ? parsed : [parsed];
+  } catch(e) {
+    state.outputs = [{ content: 'Error generating content: ' + e.message, hook: '', cta: '', hashtags: [], visual: '' }];
+  }
+  state.generating = false;
+  render();
+}
+
+// ── Form setters ────────────────────────────────────────────────────
+function setAngle(a){state.form.angle=state.form.angle===a?'':a;updateLeft();}
+function setPlatform(p){state.form.platform=p;state.form.contentType=PLATFORMS[p].types[0];updateLeft();}
+function setType(t){state.form.contentType=t;updateLeft();}
+function setTone(t){state.form.tone=t;updateLeft();}
+function setLength(l){state.form.length=l;updateLeft();}
+function setVariations(n){state.form.variations=n;updateLeft();}
+function updateLeft(){if(state.currentView==='create'){const t=document.getElementById('f-topic');if(t)state.form.topic=t.value;render();}}
+
+// ── Drafts ──────────────────────────────────────────────────────────
+function saveDraft(i){
+  const o=state.outputs[i];
+  const draft={id:Date.now(),date:new Date().toISOString(),platform:state.form.platform,contentType:state.form.contentType,topic:state.form.topic.slice(0,80),...o};
+  state.drafts=[draft,...state.drafts].slice(0,50);
+  save();
+  alert('Saved to drafts ✓');
+}
+
+function copyOutput(i){
+  const o=state.outputs[i];
+  const text=[o.content,o.hook?'\n---\nHook: '+o.hook:'',o.cta?'CTA: '+o.cta:'',o.hashtags?.length?'\n'+o.hashtags.map(h=>'#'+h.replace(/^#/,'')).join(' '):''].filter(Boolean).join('\n');
+  navigator.clipboard.writeText(text).then(()=>alert('Copied ✓')).catch(()=>alert('Copy failed — please copy manually.'));
+}
+
+function renderDrafts(el) {
+  el.innerHTML = `<div style="max-width:740px;margin:0 auto;padding:28px 24px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <div>
+        <div class="mono" style="font-size:10px;color:var(--violet);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:4px">Saved Work</div>
+        <h2 class="serif" style="font-size:26px;font-weight:400">Drafts Library</h2>
+      </div>
+      ${state.drafts.length?`<button class="btn btn-ghost" onclick="if(confirm('Clear all drafts?')){state.drafts=[];save();render();}">Clear All</button>`:''}
+    </div>
+    ${state.drafts.length===0?`<div class="empty"><div class="empty-icon">📝</div><div>No drafts yet.</div><div style="margin-top:8px;font-size:11px">Generate content and click "Save Draft" to keep it here.</div></div>`:`
+    <div class="card">
+      ${state.drafts.map((d,i)=>`
+        <div class="draft-item" onclick="loadDraft(${i})">
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:6px">
+            <span style="font-size:14px">${PLATFORMS[d.platform]?.icon||'📄'}</span>
+            <span class="mono" style="font-size:10px;color:${PLATFORMS[d.platform]?.color||'var(--violet)'};text-transform:uppercase;letter-spacing:0.08em">${d.platform} · ${d.contentType}</span>
+            <span class="mono" style="font-size:9px;color:var(--dim);margin-left:auto">${new Date(d.date).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</span>
+            <button class="btn btn-ghost" style="padding:3px 8px;font-size:9px" onclick="event.stopPropagation();deleteDraft(${i})">✕</button>
+          </div>
+          <div style="font-size:12px;color:var(--muted);font-style:italic;margin-bottom:6px">${d.topic}</div>
+          <div style="font-size:13px;color:var(--text);line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${d.content}</div>
+        </div>`).join('')}
+    </div>`}
+  </div>`;
+}
+
+function loadDraft(i){
+  const d=state.drafts[i];
+  state.form.platform=d.platform;
+  state.form.contentType=d.contentType;
+  state.form.topic=d.topic;
+  state.outputs=[{content:d.content,hook:d.hook,cta:d.cta,hashtags:d.hashtags,visual:d.visual}];
+  showMain('create');
+}
+function deleteDraft(i){state.drafts.splice(i,1);save();renderDrafts(document.getElementById('main-content'));}
+
+// ── Brand Voice ─────────────────────────────────────────────────────
+function renderBrand(el) {
+  const b=state.brand;
+  el.innerHTML=`<div style="max-width:640px;margin:0 auto;padding:28px 24px">
+    <div style="margin-bottom:28px">
+      <div class="mono" style="font-size:10px;color:var(--violet);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:4px">Brand Configuration</div>
+      <h2 class="serif" style="font-size:26px;font-weight:400">Brand Voice</h2>
+      <p style="color:var(--muted);font-size:13px;margin-top:8px;line-height:1.7">Define your brand identity once and every piece of content will automatically match your voice.</p>
+    </div>
+
+    <div style="margin-bottom:18px"><label class="form-label">Brand / Business Name</label><input id="b-name" value="${b.name}" placeholder="Your brand name"/></div>
+    <div style="margin-bottom:18px"><label class="form-label">What You Do</label><textarea id="b-desc" rows="3" placeholder="Brief description of your business and what makes you different…">${b.description}</textarea></div>
+    <div style="margin-bottom:18px"><label class="form-label">Target Audience</label><textarea id="b-audience" rows="2" placeholder="Who you're writing for…">${b.audience}</textarea></div>
+
+    <div style="margin-bottom:18px">
+      <label class="form-label">Voice Adjectives (3–5 words that describe your tone)</label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px" id="adj-list">
+        ${b.adjectives.map((a,i)=>`<span style="background:var(--violet-bg);border:1px solid var(--violet-dim);border-radius:4px;padding:4px 10px;font-size:11px;font-family:DM Mono,monospace;color:var(--violet);display:flex;align-items:center;gap:6px">${a}<span onclick="removeAdj(${i})" style="cursor:pointer;color:var(--muted)">×</span></span>`).join('')}
+      </div>
+      <div style="display:flex;gap:8px"><input id="new-adj" placeholder="e.g. warm, direct, witty…" style="font-size:12px" onkeydown="if(event.key==='Enter')addAdj()"/><button class="btn btn-ghost" onclick="addAdj()">+ Add</button></div>
+    </div>
+
+    <div style="margin-bottom:18px">
+      <label class="form-label">Things to Avoid</label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px" id="avoid-list">
+        ${b.avoid.map((a,i)=>`<span style="background:#180D14;border:1px solid rgba(244,114,182,0.3);border-radius:4px;padding:4px 10px;font-size:11px;font-family:DM Mono,monospace;color:var(--rose);display:flex;align-items:center;gap:6px">${a}<span onclick="removeAvoid(${i})" style="cursor:pointer;color:var(--muted)">×</span></span>`).join('')}
+      </div>
+      <div style="display:flex;gap:8px"><input id="new-avoid" placeholder="e.g. corporate jargon, clickbait…" style="font-size:12px" onkeydown="if(event.key==='Enter')addAvoid()"/><button class="btn btn-ghost" onclick="addAvoid()">+ Add</button></div>
+    </div>
+
+    <div style="margin-bottom:18px">
+      <label class="form-label">CTA Style</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${['soft','direct','question','value-led'].map(s=>`<span class="pill ${b.cta_style===s?'active':''}" onclick="state.brand.cta_style='${s}';save();document.querySelectorAll('.pill').forEach(p=>{if(['soft','direct','question','value-led'].includes(p.textContent.trim()))p.className='pill'+(p.textContent.trim()==='${s}'?' active':'');});">${s}</span>`).join('')}
+      </div>
+    </div>
+
+    <div style="margin-bottom:24px"><label class="form-label">Signature Phrases or Expressions (optional)</label><textarea id="b-phrases" rows="2" placeholder="Any specific phrases, sayings, or expressions your brand uses…">${b.signature_phrases||''}</textarea></div>
+
+    <button class="btn btn-primary" onclick="saveBrand()">Save Brand Voice</button>
+  </div>`;
+}
+
+function addAdj(){const v=document.getElementById('new-adj').value.trim();if(v){state.brand.adjectives.push(v);save();renderBrand(document.getElementById('main-content'));}}
+function removeAdj(i){state.brand.adjectives.splice(i,1);save();renderBrand(document.getElementById('main-content'));}
+function addAvoid(){const v=document.getElementById('new-avoid').value.trim();if(v){state.brand.avoid.push(v);save();renderBrand(document.getElementById('main-content'));}}
+function removeAvoid(i){state.brand.avoid.splice(i,1);save();renderBrand(document.getElementById('main-content'));}
+function saveBrand(){
+  state.brand.name=document.getElementById('b-name').value;
+  state.brand.description=document.getElementById('b-desc').value;
+  state.brand.audience=document.getElementById('b-audience').value;
+  state.brand.signature_phrases=document.getElementById('b-phrases').value;
+  save(); alert('Brand voice saved ✓');
+}
+
+// ── Settings ────────────────────────────────────────────────────────
+function renderSettings(el) {
+  el.innerHTML=`<div class="sm-container">
+    <div style="margin-bottom:28px">
+      <div class="mono" style="font-size:10px;color:var(--violet);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:4px">Configuration</div>
+      <h2 class="serif" style="font-size:26px;font-weight:400">Settings</h2>
+    </div>
+    <div class="api-box">
+      <label class="form-label">Anthropic API Key</label>
+      <p style="font-size:13px;color:var(--muted);line-height:1.6;margin:6px 0 12px">Get yours free at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>. Stored only in your browser — never sent anywhere else.</p>
+      <div style="display:flex;gap:8px">
+        <input type="password" id="api-key-input" value="${state.apiKey}" placeholder="sk-ant-api03-…" style="flex:1;font-family:DM Mono,monospace;font-size:12px"/>
+        <button class="btn btn-ghost" onclick="state.apiKey=document.getElementById('api-key-input').value;save();alert('API key saved ✓')">Save</button>
+      </div>
+    </div>
+    <div class="card" style="padding:18px 22px;margin-bottom:16px">
+      <div class="mono" style="font-size:10px;color:var(--violet);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:12px">How These Tools Work Together</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.8">
+        <strong style="color:var(--text)">1. Strategy Analyser</strong> → Run every Monday. Scans RSS feeds, Google Trends, and Instagram to surface the week's best content opportunities. Outputs a 14-day content calendar.<br/><br/>
+        <strong style="color:var(--text)">2. Content Creator</strong> → Use it daily. Take a topic from the Strategy Analyser, paste it here, select your platform and format, and generate polished content with hooks, hashtags, and CTAs.<br/><br/>
+        <strong style="color:var(--text)">Workflow:</strong> Monday analysis → pick 3 best topics → create 3–5 posts per topic → schedule → repeat.
+      </div>
+    </div>
+    <div class="card" style="padding:18px 22px">
+      <div class="mono" style="font-size:10px;color:var(--violet);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:12px">Data & Privacy</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.7">All data is stored locally in your browser. Your API key, brand profile, and drafts never leave your device. Clearing browser data will reset everything.</div>
+      <button class="btn btn-ghost" style="margin-top:14px;border-color:rgba(248,113,113,0.4);color:var(--rose)" onclick="if(confirm('Clear all local data? This cannot be undone.')){localStorage.clear();location.reload();}">Clear All Data</button>
+    </div>
+  </div>`;
+}
+
+// ── Init ─────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
